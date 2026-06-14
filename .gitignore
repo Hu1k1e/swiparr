@@ -44,3 +44,9 @@ next-env.d.ts
 swiparr.db
 docs/*
 .env.production.local
+
+# H-TV local files (never push)
+portainer-docker-compose.yml
+portainer-docker-compose.yml.bak
+instructions.md
+project_specs.md
