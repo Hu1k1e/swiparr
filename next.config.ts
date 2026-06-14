@@ -36,6 +36,10 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          // Content-Security-Policy is set at runtime in proxy.ts (middleware)
+          // so it can read CSP_FRAME_ANCESTORS from Docker runtime env vars.
+          // next.config.ts headers() runs AFTER middleware in Next.js and would
+          // overwrite the runtime CSP, so it is intentionally omitted here.
         ],
       },
     ];

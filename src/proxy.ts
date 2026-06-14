@@ -22,6 +22,47 @@ export async function proxy(request: NextRequest) {
     ? NextResponse.rewrite(new URL(pathname + search, request.url))
     : NextResponse.next();
 
+  // Set iframe headers at runtime for ALL responses (including public paths
+  // like /login). next.config.ts headers are build-time and cannot read
+  // Docker runtime env vars, so we handle these in middleware.
+  //
+  // X-Frame-Options auto-syncs with CSP_FRAME_ANCESTORS:
+  //   - When frame-ancestors allows iframing (not 'none', not DISABLED),
+  //     X-Frame-Options is set to SAMEORIGIN for consistency.
+  //   - Explicit X_FRAME_OPTIONS can override with a specific value or DISABLED.
+  const cspFrameAncestors = appConfig.proxy.cspFrameAncestors;
+  const allowsIframing = !['none', 'DISABLED'].includes(cspFrameAncestors.toLowerCase());
+
+  const xFrameOptions = appConfig.proxy.xFrameOptions;
+  if (xFrameOptions.toUpperCase() === 'DISABLED') {
+    // Explicitly disabled — skip X-Frame-Options entirely
+  } else if (allowsIframing && xFrameOptions === 'DENY') {
+    // User wants iframing via CSP but hasn't changed the default DENY —
+    // auto-set to SAMEORIGIN to avoid conflicting with frame-ancestors
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  } else {
+    response.headers.set('X-Frame-Options', xFrameOptions);
+  }
+
+  // Set Content-Security-Policy at runtime so CSP_FRAME_ANCESTORS
+  // (from Docker env vars) is respected. next.config.ts headers() runs
+  // AFTER middleware and cannot read runtime env vars, so the full CSP
+  // is built here instead.
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://plex.tv https://*.plex.direct wss://*.plex.direct https://api.themoviedb.org https://image.tmdb.org",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    `frame-ancestors ${cspFrameAncestors}`,
+  ].join("; ");
+  response.headers.set("Content-Security-Policy", csp);
+
   // Define public paths
   const isPublicPath =
     pathname === "/login" ||
@@ -83,19 +124,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Configurable Iframe Headers
-  const xFrameOptions = appConfig.proxy.xFrameOptions;
-  if (xFrameOptions.toUpperCase() !== 'DISABLED') {
-    response.headers.set('X-Frame-Options', xFrameOptions);
-  }
-
-  const cspFrameAncestors = appConfig.proxy.cspFrameAncestors;
-  response.headers.set('Content-Security-Policy', `frame-ancestors ${cspFrameAncestors}`);
-
-
   return response;
 }
 
 export const config = {
-  matcher: ["/:path*"],
+  matcher: [
+    // App pages except Next internals and static assets.
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|manifest.webmanifest|sw.js|.*\\.(?:png|svg|ico|jpg|jpeg|gif|webp|avif|css|js|map|txt|xml)$).*)",
+    // API routes except explicitly public auth/health/og endpoints.
+    "/api/:path((?!auth|health|og).*)",
+  ],
 };

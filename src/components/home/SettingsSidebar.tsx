@@ -37,6 +37,9 @@ import { GeneralSettings } from "./settings/GeneralSettings";
 import { StreamingSettings } from "./settings/StreamingSettings";
 import { DangerZone } from "./settings/DangerZone";
 import { useSession } from "@/hooks/api";
+import { WizarrAccessButton } from "../wizarr/WizarrAccessButton";
+
+
 export function SettingsSidebar() {
     const router = useRouter();
     const [showClearDialog, setShowClearDialog] = useState(false);
@@ -110,6 +113,11 @@ export function SettingsSidebar() {
                                 onClearData={() => setShowClearDialog(true)}
                                 onLogout={handleLogout}
                             />
+                            {sessionStatus?.isGuest && (
+                                <div className="pt-4">
+                                    <WizarrAccessButton className="w-full" size="lg" />
+                                </div>
+                            )}
                         </div>
                     </ScrollArea>
                 </SheetContent>

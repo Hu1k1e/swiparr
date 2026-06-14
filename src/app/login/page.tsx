@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const join = params.join;
   const { basePath, appPublicUrl } = await getAsyncRuntimeConfig();
   const origin = appPublicUrl.startsWith('http') ? appPublicUrl : `https://${appPublicUrl}`;
-
+  
   if (join && typeof join === 'string') {
     const ogUrl = new URL(`${basePath}/api/og`, origin);
     ogUrl.searchParams.set('join', join);
