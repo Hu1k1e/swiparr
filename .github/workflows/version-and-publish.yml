@@ -13,7 +13,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -35,8 +34,10 @@ jobs:
       # last-written value, so we pass digests via artifacts instead.
       image: ${{ steps.build.outputs.imageid }}
     steps:
-      - name: Compute short sha
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Compute short sha and env vars
+        run: |
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
         with:
@@ -92,8 +93,10 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: Compute short sha
-        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Compute short sha and env vars
+        run: |
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Download digests
         uses: actions/download-artifact@v4
